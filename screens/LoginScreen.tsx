@@ -39,15 +39,15 @@ export default function LoginScreen(): React.ReactElement {
       const res = await API.post('/login', { email, password });
 
       // backend returns token in res.data.token (adjust if different)
-const token = res.data?.token ?? res.data?.access_token ?? res.data?.data?.token;
-if (!token) throw new Error('No token returned from server');
+      const token = res.data?.token ?? res.data?.access_token ?? res.data?.data?.token;
+      if (!token) throw new Error('No token returned from server');
 
-await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('token', token);
 
-// optional immediate set for this instance (interceptor will handle future requests)
-API.defaults.headers = API.defaults.headers || {};
-API.defaults.headers.common = API.defaults.headers.common || {};
-API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // optional immediate set for this instance (interceptor will handle future requests)
+      API.defaults.headers = API.defaults.headers || {};
+      API.defaults.headers.common = API.defaults.headers.common || {};
+      API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       Alert.alert('Success', res.data?.message ?? 'Logged in');
 
@@ -72,6 +72,10 @@ API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } finally {
       setLoading(false);
     }
+  };
+
+  const navigateToRegister = () => {
+    navigation.navigate('Register');
   };
 
   return (
@@ -113,6 +117,14 @@ API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} disabled={loading}>
               {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryButtonText}>Log in</Text>}
             </TouchableOpacity>
+            
+            {/* Register Link */}
+            <View style={styles.registerLinkContainer}>
+              <Text style={styles.registerText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={navigateToRegister}>
+                <Text style={styles.registerLink}>Register here</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -157,6 +169,17 @@ const styles = StyleSheet.create({
   eyeIcon: { position: 'absolute', right: 20, top: '50%', transform: [{ translateY: -12 }], zIndex: 1 },
   primaryButton: { backgroundColor: PINK, width: '100%', borderRadius: 30, paddingVertical: 14, alignItems: 'center', marginBottom: 12 },
   primaryButtonText: { color: '#000', fontSize: 16, fontWeight: 'bold' },
+  registerLinkContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+  },
+  registerText: {
+    color: DARK,
+  },
+  registerLink: {
+    color: PINK,
+    fontWeight: 'bold',
+  },
   loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' },
   avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: PINK, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   avatarImage: { width: 85, height: 85, borderRadius: 30 },

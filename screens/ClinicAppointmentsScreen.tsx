@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Modal, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Modal, FlatList, RefreshControl, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { API } from '../src/api';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 
 const PINK = '#FFC1CC';
 const PURPLE = '#B39DDB';
@@ -28,6 +30,13 @@ type OptionModalState = {
   selected: string[]; // keep as array; for single we use length 0/1
 };
 
+type DateTimePickerState = {
+  visible: boolean;
+  fieldId: number | null;
+  mode: 'date' | 'time';
+  value: Date;
+};
+
 export default function ClinicAppointmentsScreen() {
   const [clinicId, setClinicId] = React.useState<number | null>(null);
   const [ownerName, setOwnerName] = React.useState<string>('');
@@ -47,6 +56,13 @@ export default function ClinicAppointmentsScreen() {
     multiple: false,
     options: [],
     selected: [],
+  });
+
+  const [dateTimePicker, setDateTimePicker] = React.useState<DateTimePickerState>({
+    visible: false,
+    fieldId: null,
+    mode: 'date',
+    value: new Date(),
   });
 
   React.useEffect(() => {
@@ -113,6 +129,73 @@ export default function ClinicAppointmentsScreen() {
       options: (field.options || []) as string[],
       selected: Array.isArray(current) ? current : (current ? [current] : []),
     });
+  };
+
+  const openDateTimePicker = (field: ClinicField) => {
+    const key = `f_${field.id}`;
+    const currentValue = values[key];
+    let initialDate = new Date();
+    
+    if (currentValue) {
+      try {
+        if (field.type === 'date') {
+          // Try to parse existing date value
+          const [year, month, day] = currentValue.split('-').map(Number);
+          if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+            initialDate = new Date(year, month - 1, day);
+          }
+        } else if (field.type === 'time') {
+          // Try to parse existing time value
+          const [hours, minutes] = currentValue.split(':').map(Number);
+          if (!isNaN(hours) && !isNaN(minutes)) {
+            initialDate.setHours(hours, minutes, 0);
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing date/time:', e);
+      }
+    }
+
+    setDateTimePicker({
+      visible: true,
+      fieldId: field.id,
+      mode: field.type as 'date' | 'time',
+      value: initialDate,
+    });
+  };
+
+  const handleDateTimeChange = (event: any, selectedDate?: Date) => {
+    const { fieldId, mode } = dateTimePicker;
+    
+    // On Android, dismissing the picker passes null for selectedDate
+    if (!selectedDate) {
+      if (Platform.OS === 'android') {
+        setDateTimePicker(prev => ({ ...prev, visible: false }));
+      }
+      return;
+    }
+
+    let formattedValue = '';
+    if (mode === 'date') {
+      formattedValue = format(selectedDate, 'yyyy-MM-dd');
+    } else {
+      formattedValue = format(selectedDate, 'HH:mm');
+    }
+
+    if (fieldId) {
+      const key = `f_${fieldId}`;
+      setValues(prev => ({
+        ...prev,
+        [key]: formattedValue
+      }));
+    }
+
+    // On iOS the picker stays open, on Android it closes immediately
+    if (Platform.OS === 'android') {
+      setDateTimePicker(prev => ({ ...prev, visible: false }));
+    } else {
+      setDateTimePicker(prev => ({ ...prev, value: selectedDate }));
+    }
   };
 
   const commitOptionSelection = () => {
@@ -208,9 +291,69 @@ export default function ClinicAppointmentsScreen() {
       );
     }
 
-    // date/time/number/text
+    // Date picker
+    if (f.type === 'date') {
+      let displayValue = val || 'Select date';
+      if (val) {
+        try {
+          // If it's already in YYYY-MM-DD format, make it more readable
+          const [year, month, day] = val.split('-');
+          if (year && month && day) {
+            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            displayValue = format(date, 'MMMM d, yyyy');
+          }
+        } catch (e) {
+          console.error('Error formatting date:', e);
+        }
+      }
+
+      return (
+        <View key={key} style={styles.inputGroup}>
+          <Text style={styles.label}>{f.label}{f.required ? ' *' : ''}</Text>
+          <TouchableOpacity 
+            style={styles.selector} 
+            onPress={() => openDateTimePicker(f)}
+          >
+            <Text style={styles.selectorText}>{displayValue}</Text>
+            <Ionicons name="calendar" size={18} color="#666" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Time picker
+    if (f.type === 'time') {
+      let displayValue = val || 'Select time';
+      if (val) {
+        try {
+          // If it's in HH:MM format, make it more readable
+          const [hours, minutes] = val.split(':');
+          if (hours && minutes) {
+            const date = new Date();
+            date.setHours(parseInt(hours), parseInt(minutes), 0);
+            displayValue = format(date, 'h:mm a'); // 12-hour format with AM/PM
+          }
+        } catch (e) {
+          console.error('Error formatting time:', e);
+        }
+      }
+
+      return (
+        <View key={key} style={styles.inputGroup}>
+          <Text style={styles.label}>{f.label}{f.required ? ' *' : ''}</Text>
+          <TouchableOpacity 
+            style={styles.selector} 
+            onPress={() => openDateTimePicker(f)}
+          >
+            <Text style={styles.selectorText}>{displayValue}</Text>
+            <Ionicons name="time" size={18} color="#666" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // number/text
     const keyboardType = f.type === 'number' ? 'numeric' : 'default';
-    const placeholder = f.type === 'date' ? 'YYYY-MM-DD' : f.type === 'time' ? 'HH:MM' : `Enter ${f.label.toLowerCase()}`;
     return (
       <View key={key} style={styles.inputGroup}>
         <Text style={styles.label}>{f.label}{f.required ? ' *' : ''}</Text>
@@ -218,7 +361,7 @@ export default function ClinicAppointmentsScreen() {
           style={styles.input}
           value={String(val ?? '')}
           onChangeText={(t) => setValues((p) => ({ ...p, [key]: t }))}
-          placeholder={placeholder}
+          placeholder={`Enter ${f.label.toLowerCase()}`}
           placeholderTextColor="#888"
           keyboardType={keyboardType as any}
         />
@@ -318,6 +461,57 @@ export default function ClinicAppointmentsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* DateTimePicker for iOS and Android */}
+      {dateTimePicker.visible && (
+        <>
+          {Platform.OS === 'ios' && (
+            <Modal visible={true} transparent animationType="slide">
+              <View style={styles.modalOverlay}>
+                <View style={[styles.modalCard, { padding: 0 }]}>
+                  <View style={[styles.modalHeader, { padding: 14 }]}>
+                    <Text style={styles.modalTitle}>
+                      Select {dateTimePicker.mode === 'date' ? 'Date' : 'Time'}
+                    </Text>
+                    <TouchableOpacity onPress={() => setDateTimePicker(prev => ({ ...prev, visible: false }))}>
+                      <Ionicons name="close" size={22} color={DARK} />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <DateTimePicker
+                    value={dateTimePicker.value}
+                    mode={dateTimePicker.mode}
+                    display="spinner"
+                    onChange={handleDateTimeChange}
+                    style={{ width: '100%', height: 200 }}
+                  />
+                  
+                  <TouchableOpacity 
+                    style={styles.modalSave}
+                    onPress={() => {
+                      // For iOS we need to manually close the modal and apply the date
+                      handleDateTimeChange({ type: 'set' }, dateTimePicker.value);
+                      setDateTimePicker(prev => ({ ...prev, visible: false }));
+                    }}
+                  >
+                    <Text style={styles.modalSaveText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
+          
+          {/* For Android, the picker appears as a dialog automatically */}
+          {Platform.OS === 'android' && (
+            <DateTimePicker
+              value={dateTimePicker.value}
+              mode={dateTimePicker.mode}
+              is24Hour={true}
+              onChange={handleDateTimeChange}
+            />
+          )}
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -357,4 +551,4 @@ const styles = StyleSheet.create({
   optionTextSelected: { color: PURPLE, fontWeight: 'bold' },
   modalSave: { backgroundColor: PINK, paddingVertical: 12, alignItems: 'center', borderRadius: 10, marginTop: 10 },
   modalSaveText: { color: DARK, fontWeight: 'bold' },
-}); 
+});

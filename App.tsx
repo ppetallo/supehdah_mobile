@@ -5,11 +5,13 @@ import LoginScreen from './screens/LoginScreen';
 import PersonalTabs from './navigation/PersonalTabs';
 import EditProfileScreen from './screens/EditProfileScreen';
 import ClinicTabs from './navigation/ClinicTabs';
+import RegisterScreen from './screens/RegisterScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   PersonalTabs: undefined;
   EditProfile: undefined;
+  Register: undefined;
   ClinicTabs: undefined;
 };
 
@@ -23,6 +25,7 @@ export default function App() {
         <Stack.Screen name="PersonalTabs" component={PersonalTabs} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="ClinicTabs" component={ClinicTabs} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

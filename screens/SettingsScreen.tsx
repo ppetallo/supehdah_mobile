@@ -1,5 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Switch,
+  ScrollView,
+  Alert,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,11 +18,12 @@ import { RootStackParamList } from '../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API } from '../src/api';
 
-const PINK = '#FFC1CC';
-const PURPLE = '#B39DDB';
+const PINK = '#FF6B8A';
+const PURPLE = '#6C5CE7';
 const WHITE = '#FFFFFF';
-const DARK = '#333';
-const LIGHT = '#F8F6FF';
+const DARK = '#2E2E36';
+const LIGHT = '#F6F7FB';
+const MUTED = '#7B7B8C';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -47,7 +59,9 @@ export default function SettingsScreen() {
       }
     };
     fetchMe();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const openEditModal = () => {
@@ -62,7 +76,8 @@ export default function SettingsScreen() {
     try {
       if (!nameInput.trim()) return Alert.alert('Validation', 'Name is required');
       if (!emailInput.trim()) return Alert.alert('Validation', 'Email is required');
-      if (passwordInput && passwordInput !== passwordConfirmInput) return Alert.alert('Validation', 'Passwords do not match');
+      if (passwordInput && passwordInput !== passwordConfirmInput)
+        return Alert.alert('Validation', 'Passwords do not match');
 
       setSavingProfile(true);
       const payload: Record<string, string> = { name: nameInput.trim(), email: emailInput.trim() };
@@ -102,21 +117,30 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.bg}>
+    <ScrollView style={styles.bg} contentContainerStyle={{ paddingBottom: 40 }}>
       {/* Profile Header */}
-      <View style={styles.profileHeader}>
-        <Text style={styles.headerTitle}>My Profile</Text>
-        <View style={styles.headerRow}>
-          <View style={styles.avatarCircle}>
-            <Ionicons name="person" size={40} color={WHITE} />
+      <View style={styles.headerWrap}>
+        <View style={styles.profileHeader}>
+          <View style={styles.leftHeader}>
+            <Text style={styles.headerTitle}>My Profile</Text>
+            {loadingUser ? (
+              <ActivityIndicator color={PURPLE} />
+            ) : (
+              <>
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {userName ?? 'User'}
+                </Text>
+                <Text style={styles.headerEmail} numberOfLines={1}>
+                  {userEmail ?? '—'}
+                </Text>
+              </>
+            )}
           </View>
-          <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={styles.headerName} numberOfLines={1}>
-              {userName || (loadingUser ? 'Loading...' : 'User')}
-            </Text>
-            <Text style={styles.headerEmail} numberOfLines={1}>
-              {userEmail || ' '}
-            </Text>
+
+          <View style={styles.avatarArea}>
+            <View style={styles.avatarCircle}>
+              <Ionicons name="person" size={36} color={WHITE} />
+            </View>
           </View>
         </View>
       </View>
@@ -125,69 +149,89 @@ export default function SettingsScreen() {
         {/* Manage Account Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="settings-outline" size={26} color={PURPLE} />
+            <Ionicons name="settings-outline" size={20} color={PURPLE} />
             <Text style={styles.cardTitle}>Manage Account</Text>
           </View>
-          <TouchableOpacity style={styles.cardRow} onPress={openEditModal}>
-            <Ionicons name="create-outline" size={20} color={PINK} style={styles.icon} />
-            <Text style={styles.cardText}>Edit Profile</Text>
+
+          <TouchableOpacity style={styles.cardRow} onPress={openEditModal} activeOpacity={0.7}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="create-outline" size={18} color={MUTED} />
+              <Text style={styles.cardText}>Edit Profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={MUTED} />
           </TouchableOpacity>
         </View>
 
         {/* Appointment History Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <MaterialIcons name="history" size={26} color={PURPLE} />
+            <MaterialIcons name="history" size={20} color={PURPLE} />
             <Text style={styles.cardTitle}>Appointment History</Text>
           </View>
-          <TouchableOpacity style={styles.cardRow}>
-            <Ionicons name="calendar-outline" size={20} color={PINK} style={styles.icon} />
-            <Text style={styles.cardText}>View All Appointments</Text>
+
+          <TouchableOpacity style={styles.cardRow} onPress={() => navigation.navigate('ClinicTabs')} activeOpacity={0.7}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="calendar-outline" size={18} color={MUTED} />
+              <Text style={styles.cardText}>View All Appointments</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={MUTED} />
           </TouchableOpacity>
         </View>
 
         {/* Notification Settings Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="notifications-outline" size={26} color={PURPLE} />
+            <Ionicons name="notifications-outline" size={20} color={PURPLE} />
             <Text style={styles.cardTitle}>Notifications</Text>
           </View>
-          <View style={styles.cardRow}>
-            <Ionicons name="notifications" size={20} color={PINK} style={styles.icon} />
-            <Text style={styles.cardText}>Enable Notifications</Text>
+
+          <View style={[styles.cardRow, { paddingVertical: 14 }]}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="notifications" size={18} color={MUTED} />
+              <Text style={styles.cardText}>Enable Notifications</Text>
+            </View>
             <Switch
               value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#ccc', true: PINK }}
-              thumbColor={notificationsEnabled ? PURPLE : '#eee'}
+              trackColor={{ false: '#e6e6e6', true: PINK }}
+              thumbColor={notificationsEnabled ? WHITE : '#fff'}
             />
           </View>
         </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={WHITE} style={{ marginRight: 8 }} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        {/* Danger / Logout */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="person-circle-outline" size={20} color={PURPLE} />
+            <Text style={styles.cardTitle}>Account</Text>
+          </View>
+
+          <TouchableOpacity style={[styles.cardRow, styles.logoutRow]} onPress={handleLogout} activeOpacity={0.8}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="log-out-outline" size={18} color={PINK} />
+              <Text style={[styles.cardText, { color: PINK, fontWeight: '700' }]}>Logout</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Edit Profile Modal */}
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsEditModalVisible(false)}
-      >
+      <Modal visible={isEditModalVisible} animationType="slide" transparent onRequestClose={() => setIsEditModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Edit Profile</Text>
+
+            <Text style={styles.inputLabel}>Name</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="Name"
               value={nameInput}
               onChangeText={setNameInput}
               autoCapitalize="words"
+              placeholderTextColor="#999"
             />
+
+            <Text style={styles.inputLabel}>Email</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="Email"
@@ -195,27 +239,40 @@ export default function SettingsScreen() {
               onChangeText={setEmailInput}
               autoCapitalize="none"
               keyboardType="email-address"
+              placeholderTextColor="#999"
             />
+
+            <Text style={styles.inputLabel}>New Password (optional)</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="New Password (optional)"
+              placeholder="New Password"
               value={passwordInput}
               onChangeText={setPasswordInput}
               secureTextEntry
+              placeholderTextColor="#999"
             />
+
+            <Text style={styles.inputLabel}>Confirm New Password</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Confirm New Password"
+              placeholder="Confirm Password"
               value={passwordConfirmInput}
               onChangeText={setPasswordConfirmInput}
               secureTextEntry
+              placeholderTextColor="#999"
             />
+
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => setIsEditModalVisible(false)} disabled={savingProfile}>
-                <Text style={styles.secondaryButtonText}>Cancel</Text>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.cancelBtn]}
+                onPress={() => setIsEditModalVisible(false)}
+                disabled={savingProfile}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile} disabled={savingProfile}>
-                {savingProfile ? <ActivityIndicator color={WHITE} /> : <Text style={styles.saveButtonText}>Save</Text>}
+
+              <TouchableOpacity style={[styles.actionBtn, styles.saveBtn]} onPress={handleSaveProfile} disabled={savingProfile}>
+                {savingProfile ? <ActivityIndicator color={WHITE} /> : <Text style={styles.saveBtnText}>Save</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -227,28 +284,91 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: LIGHT },
-  profileHeader: { width: '100%', backgroundColor: PURPLE, paddingHorizontal: 20, paddingTop: 50, paddingBottom: 25, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
-  headerTitle: { color: WHITE, fontSize: 30, fontWeight: 'bold', marginBottom: 17, marginLeft: 10 },
-  headerRow: { flexDirection: 'row', alignItems: 'center' },
-  avatarCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: PINK, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
-  headerName: { color: WHITE, fontSize: 25, fontWeight: 'bold' },
-  headerEmail: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 3 },
-  content: { padding: 22, paddingBottom: 40 },
-  card: { backgroundColor: WHITE, borderRadius: 18, padding: 18, marginBottom: 15, shadowColor: '#B39DDB', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  cardTitle: { fontSize: 17, fontWeight: 'bold', color: PURPLE, marginLeft: 10 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-  cardText: { fontSize: 15, color: DARK, marginLeft: 10, flex: 1 },
-  icon: { marginRight: 2 },
-  logoutButton: { flexDirection: 'row', backgroundColor: PINK, padding: 15, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  logoutText: { color: WHITE, fontWeight: 'bold', fontSize: 16 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  modalCard: { width: '100%', backgroundColor: WHITE, borderRadius: 16, padding: 18 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: DARK, marginBottom: 12, textAlign: 'center' },
-  modalInput: { backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10, borderWidth: 1, borderColor: '#eee', fontSize: 15 },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
-  secondaryButton: { backgroundColor: '#eee', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, marginRight: 10 },
-  secondaryButtonText: { color: DARK, fontWeight: 'bold' },
-  saveButton: { backgroundColor: PINK, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10 },
-  saveButtonText: { color: WHITE, fontWeight: 'bold' },
+  headerWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 6,
+    backgroundColor: LIGHT,
+    marginTop: 25,
+  },
+  profileHeader: {
+    backgroundColor: WHITE,
+    borderRadius: 14,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    // subtle shadow
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  leftHeader: { flex: 1 },
+  headerTitle: { color: MUTED, fontSize: 13, fontWeight: '600', marginBottom: 6 },
+  headerName: { color: DARK, fontSize: 18, fontWeight: '700' },
+  headerEmail: { color: MUTED, fontSize: 13, marginTop: 4 },
+  avatarArea: { marginLeft: 12 },
+  avatarCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: PURPLE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: WHITE,
+  },
+
+  content: { paddingHorizontal: 22, paddingTop: 18 },
+
+  card: {
+    backgroundColor: WHITE,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    // subtle shadow matching HomeScreen
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: PURPLE, marginLeft: 10 },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F2F6',
+    justifyContent: 'space-between',
+  },
+  rowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  cardText: { fontSize: 15, color: DARK, marginLeft: 12 },
+  logoutRow: { justifyContent: 'flex-start', borderTopWidth: 0, paddingVertical: 14 },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.36)', justifyContent: 'center', padding: 20 },
+  modalCard: { backgroundColor: WHITE, borderRadius: 14, padding: 18 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: DARK, marginBottom: 12, textAlign: 'center' },
+
+  inputLabel: { fontSize: 12, color: MUTED, marginTop: 8, marginBottom: 6, marginLeft: 4 },
+  modalInput: {
+    backgroundColor: '#FAFAFB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#F0F0F3',
+  },
+
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 14 },
+  actionBtn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, minWidth: 100, alignItems: 'center' },
+  cancelBtn: { backgroundColor: '#F2F2F3' },
+  cancelBtnText: { color: DARK, fontWeight: '700' },
+  saveBtn: { backgroundColor: PURPLE },
+  saveBtnText: { color: WHITE, fontWeight: '700' },
 });
