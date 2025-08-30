@@ -28,14 +28,26 @@ const MUTED = '#7B7B8C';
 export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-  const [userName, setUserName] = React.useState<string | null>(null);
+  const [firstName, setFirstName] = React.useState<string | null>(null);
+  const [middleName, setMiddleName] = React.useState<string | null>(null);
+  const [lastName, setLastName] = React.useState<string | null>(null);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
+  const [userPhone, setUserPhone] = React.useState<string | null>(null);
   const [loadingUser, setLoadingUser] = React.useState<boolean>(false);
+  
+  // Helper function to format user name consistently
+  const formatFullName = () => {
+    if (!firstName && !lastName) return 'User';
+    return `${firstName || ''} ${middleName ? `${middleName} ` : ''}${lastName || ''}`.trim();
+  };
 
   // Manage Account states
   const [isEditModalVisible, setIsEditModalVisible] = React.useState<boolean>(false);
-  const [nameInput, setNameInput] = React.useState<string>('');
+  const [firstNameInput, setFirstNameInput] = React.useState<string>('');
+  const [middleNameInput, setMiddleNameInput] = React.useState<string>('');
+  const [lastNameInput, setLastNameInput] = React.useState<string>('');
   const [emailInput, setEmailInput] = React.useState<string>('');
+  const [phoneNumberInput, setPhoneNumberInput] = React.useState<string>('');
   const [passwordInput, setPasswordInput] = React.useState<string>('');
   const [passwordConfirmInput, setPasswordConfirmInput] = React.useState<string>('');
   const [savingProfile, setSavingProfile] = React.useState<boolean>(false);
@@ -47,13 +59,29 @@ export default function SettingsScreen() {
         setLoadingUser(true);
         const res = await API.get('/me');
         if (isMounted) {
-          setUserName(res.data?.name ?? null);
-          setUserEmail(res.data?.email ?? null);
-          setNameInput(res.data?.name ?? '');
-          setEmailInput(res.data?.email ?? '');
+          const userData = res.data;
+          console.log('User data received:', userData);
+          
+          // Set state values from API response
+          setFirstName(userData?.first_name ?? null);
+          setMiddleName(userData?.middle_name ?? null);
+          setLastName(userData?.last_name ?? null);
+          setUserEmail(userData?.email ?? null);
+          setUserPhone(userData?.phone_number ?? null);
+          
+          // Set input field values
+          setFirstNameInput(userData?.first_name ?? '');
+          setMiddleNameInput(userData?.middle_name ?? '');
+          setLastNameInput(userData?.last_name ?? '');
+          setEmailInput(userData?.email ?? '');
+          setPhoneNumberInput(userData?.phone_number ?? '');
+          setMiddleNameInput(userData?.middle_name ?? '');
+          setLastNameInput(userData?.last_name ?? '');
+          setEmailInput(userData?.email ?? '');
+          setPhoneNumberInput(userData?.phone_number ?? '');
         }
       } catch (e) {
-        // silently ignore
+        console.error('Error fetching user data:', e);
       } finally {
         if (isMounted) setLoadingUser(false);
       }
@@ -65,7 +93,9 @@ export default function SettingsScreen() {
   }, []);
 
   const openEditModal = () => {
-    setNameInput(userName ?? '');
+    setFirstNameInput(firstName ?? '');
+    setMiddleNameInput(middleName ?? '');
+    setLastNameInput(lastName ?? '');
     setEmailInput(userEmail ?? '');
     setPasswordInput('');
     setPasswordConfirmInput('');
@@ -74,21 +104,33 @@ export default function SettingsScreen() {
 
   const handleSaveProfile = async () => {
     try {
-      if (!nameInput.trim()) return Alert.alert('Validation', 'Name is required');
+      if (!firstNameInput.trim()) return Alert.alert('Validation', 'First name is required');
+      if (!lastNameInput.trim()) return Alert.alert('Validation', 'Last name is required');
       if (!emailInput.trim()) return Alert.alert('Validation', 'Email is required');
       if (passwordInput && passwordInput !== passwordConfirmInput)
         return Alert.alert('Validation', 'Passwords do not match');
 
       setSavingProfile(true);
-      const payload: Record<string, string> = { name: nameInput.trim(), email: emailInput.trim() };
+      const payload: Record<string, string> = { 
+        first_name: firstNameInput.trim(), 
+        middle_name: middleNameInput.trim(), 
+        last_name: lastNameInput.trim(), 
+        email: emailInput.trim(),
+        phone_number: phoneNumberInput.trim()
+      };
+      
       if (passwordInput) {
         payload.password = passwordInput;
         payload.password_confirmation = passwordConfirmInput;
       }
 
       const res = await API.put('/me', payload);
-      setUserName(res.data?.name ?? nameInput);
-      setUserEmail(res.data?.email ?? emailInput);
+      const userData = res.data.user || res.data;
+      setFirstName(userData?.first_name ?? firstNameInput);
+      setMiddleName(userData?.middle_name ?? middleNameInput);
+      setLastName(userData?.last_name ?? lastNameInput);
+      setUserEmail(userData?.email ?? emailInput);
+      setUserPhone(userData?.phone_number ?? phoneNumberInput);
       Alert.alert('Success', 'Profile updated');
       setIsEditModalVisible(false);
     } catch (e: any) {
@@ -128,11 +170,16 @@ export default function SettingsScreen() {
             ) : (
               <>
                 <Text style={styles.headerName} numberOfLines={1}>
-                  {userName ?? 'User'}
+                  {formatFullName()}
                 </Text>
                 <Text style={styles.headerEmail} numberOfLines={1}>
                   {userEmail ?? '—'}
                 </Text>
+                {userPhone && (
+                  <Text style={styles.headerPhone} numberOfLines={1}>
+                    {userPhone}
+                  </Text>
+                )}
               </>
             )}
           </View>
@@ -221,13 +268,43 @@ export default function SettingsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Edit Profile</Text>
 
-            <Text style={styles.inputLabel}>Name</Text>
+            <Text style={styles.inputLabel}>First Name</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Name"
-              value={nameInput}
-              onChangeText={setNameInput}
+              placeholder="First Name"
+              value={firstNameInput}
+              onChangeText={setFirstNameInput}
               autoCapitalize="words"
+              placeholderTextColor="#999"
+            />
+            
+            <Text style={styles.inputLabel}>Middle Name (optional)</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Middle Name"
+              value={middleNameInput}
+              onChangeText={setMiddleNameInput}
+              autoCapitalize="words"
+              placeholderTextColor="#999"
+            />
+            
+            <Text style={styles.inputLabel}>Last Name</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Last Name"
+              value={lastNameInput}
+              onChangeText={setLastNameInput}
+              autoCapitalize="words"
+              placeholderTextColor="#999"
+            />
+            
+            <Text style={styles.inputLabel}>Phone Number</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Phone Number"
+              value={phoneNumberInput}
+              onChangeText={setPhoneNumberInput}
+              keyboardType="phone-pad"
               placeholderTextColor="#999"
             />
 
@@ -308,6 +385,7 @@ const styles = StyleSheet.create({
   headerTitle: { color: MUTED, fontSize: 13, fontWeight: '600', marginBottom: 6 },
   headerName: { color: DARK, fontSize: 18, fontWeight: '700' },
   headerEmail: { color: MUTED, fontSize: 13, marginTop: 4 },
+  headerPhone: { color: MUTED, fontSize: 13, marginTop: 2 },
   avatarArea: { marginLeft: 12 },
   avatarCircle: {
     width: 64,

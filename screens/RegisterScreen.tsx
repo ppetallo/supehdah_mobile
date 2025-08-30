@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { API } from '../src/api';
 import { useNavigation } from '@react-navigation/native';
@@ -21,24 +22,32 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { RootStackParamList } from '../App';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const PINK = '#FFC1CC';
 const DARK = '#333';
 
 export default function RegisterScreen(): React.ReactElement {
-  const [name, setName] = useState<string>('');
+  const [firstName, setFirstName] = useState<string>('');
+  const [middleName, setMiddleName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [gender, setGender] = useState<string>('');
+  const [birthday, setBirthday] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [password, setPassword] = useState<string>('');
   const [passwordConfirmation, setPasswordConfirmation] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [genderModalVisible, setGenderModalVisible] = useState<boolean>(false);
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleRegister = async (): Promise<void> => {
-    if (!name || !email || !password || !passwordConfirmation) {
-      Alert.alert('Error', 'All fields are required');
+    if (!firstName || !lastName || !email || !gender || !birthday || !password || !passwordConfirmation) {
+      Alert.alert('Error', 'Required fields are missing');
       return;
     }
 
@@ -49,11 +58,20 @@ export default function RegisterScreen(): React.ReactElement {
 
     try {
       setLoading(true);
-
+      
+      // Format birthday to YYYY-MM-DD if available
+      const formattedBirthday = birthday ? 
+        birthday.toISOString().split('T')[0] : null;
+      
       const res = await API.post('/register', {
-        name,
-        email,
-        password,
+        first_name: firstName,
+        middle_name: middleName || null,
+        last_name: lastName,
+        email: email,
+        phone_number: phoneNumber || null,
+        gender: gender || null,
+        birthday: formattedBirthday,
+        password: password,
         password_confirmation: passwordConfirmation
       });
 
@@ -120,30 +138,83 @@ export default function RegisterScreen(): React.ReactElement {
             </View>
             <Text style={styles.title}>Create Account</Text>
 
-            {/* Name Input */}
+            {/* First Name Input */}
             <TextInput
               style={styles.input}
-              placeholder="Full Name"
+              placeholder="First Name *"
               autoCapitalize="words"
-              value={name}
-              onChangeText={setName}
+              value={firstName}
+              onChangeText={setFirstName}
+            />
+
+            {/* Middle Name Input */}
+            <TextInput
+              style={styles.input}
+              placeholder="Middle Name (optional)"
+              autoCapitalize="words"
+              value={middleName}
+              onChangeText={setMiddleName}
+            />
+
+            {/* Last Name Input */}
+            <TextInput
+              style={styles.input}
+              placeholder="Last Name *"
+              autoCapitalize="words"
+              value={lastName}
+              onChangeText={setLastName}
             />
 
             {/* Email Input */}
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder="Email *"
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
               onChangeText={setEmail}
             />
 
+            {/* Phone Number Input */}
+            <TextInput
+              style={styles.input}
+              placeholder="Phone Number"
+              keyboardType="phone-pad"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+            />
+
+            {/* Gender Selection */}
+            <TouchableOpacity 
+              style={styles.genderButton} 
+              onPress={() => setGenderModalVisible(true)}
+            >
+              <Text style={[styles.genderText, {color: gender ? DARK : '#a0a0a0'}]}>
+                {gender ? 
+                 (gender === 'female' ? 'Female' : 
+                  gender === 'male' ? 'Male' : 
+                  'Prefer not to say') : 
+                 'Select Gender *'}
+              </Text>
+              <Text>▼</Text>
+            </TouchableOpacity>
+
+            {/* Birthday Selector */}
+            <TouchableOpacity 
+              style={styles.datePickerButton}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={[styles.dateText, {color: birthday ? DARK : '#a0a0a0'}]}>
+                {birthday ? birthday.toLocaleDateString() : 'Select Birthday *'}
+              </Text>
+              <Text>📅</Text>
+            </TouchableOpacity>
+
             {/* Password Input */}
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
-                placeholder="Password"
+                placeholder="Password *"
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
@@ -187,6 +258,73 @@ export default function RegisterScreen(): React.ReactElement {
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={PINK} />
         </View>
+      )}
+
+      {/* Gender Selection Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={genderModalVisible}
+        onRequestClose={() => setGenderModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Gender</Text>
+            
+            <TouchableOpacity 
+              style={styles.modalOption}
+              onPress={() => {
+                setGender('female');
+                setGenderModalVisible(false);
+              }}
+            >
+              <Text style={styles.modalOptionText}>Female</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.modalOption}
+              onPress={() => {
+                setGender('male');
+                setGenderModalVisible(false);
+              }}
+            >
+              <Text style={styles.modalOptionText}>Male</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.modalOption}
+              onPress={() => {
+                setGender('prefer_not_say');
+                setGenderModalVisible(false);
+              }}
+            >
+              <Text style={styles.modalOptionText}>Prefer not to say</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.modalOption, {backgroundColor: PINK}]}
+              onPress={() => setGenderModalVisible(false)}
+            >
+              <Text style={[styles.modalOptionText, {fontWeight: 'bold'}]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Picker for Birthday */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={birthday || new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowDatePicker(false);
+            if (selectedDate && event.type !== 'dismissed') {
+              setBirthday(selectedDate);
+            }
+          }}
+          maximumDate={new Date()} // Cannot select future dates
+        />
       )}
     </ImageBackground>
   );
@@ -283,5 +421,77 @@ const styles = StyleSheet.create({
     width: 85, 
     height: 85, 
     borderRadius: 30 
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: DARK,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalOption: {
+    width: '100%',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    backgroundColor: '#f0f0f0',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: DARK,
+  },
+  datePickerButton: {
+    backgroundColor: '#fff',
+    borderRadius: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dateText: {
+    fontSize: 16,
+    color: DARK,
+  },
+  genderButton: {
+    backgroundColor: '#fff',
+    borderRadius: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  genderText: {
+    fontSize: 16,
+    color: DARK,
+  },
+  rowContainer: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  halfWidth: {
+    width: '48%', // leaving a little space between them
   },
 });
